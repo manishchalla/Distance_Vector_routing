@@ -18,8 +18,8 @@ def common_init(self):
     print(f"entity {self.node}: initializing")
 
     #copy costs from distance table
-    self.direct_costs = self.distance_table[self.node][:]  
-    self.next_hop = [i for i in range(4)]  
+    self.links = self.distance_table[self.node][:]  
+    self.forward = [i for i in range(4)]  
     
     # find immediate neighbots
     self.neighbors = []
@@ -55,32 +55,32 @@ def common_update(self, packet):
 
 
     # store curr costs before update
-    before_update = self.distance_table[self.node][:]
+    oldcosts = self.distance_table[self.node][:]
     
     # reset paths
     for dest in range(4):
-        if dest != self.node and self.next_hop[dest] == sender:
-            self.distance_table[self.node][dest] = self.direct_costs[dest]
-            if self.direct_costs[dest] < INF:
-                self.next_hop[dest] = dest
+        if dest != self.node and self.forward[dest] == sender:
+            self.distance_table[self.node][dest] = self.links[dest]
+            if self.links[dest] < INF:
+                self.forward[dest] = dest
             else:
-                self.next_hop[dest] = -1  
+                self.forward[dest] = -1  
 
     changed = False
     my_direct_cost_to_sender = self.distance_table[self.node][sender]
 
     for dest in range(4):
         if dest != self.node: 
-            current_cost = self.distance_table[self.node][dest]
-            new_cost_via_sender = my_direct_cost_to_sender + packet.mincost[dest]
+            curcost = self.distance_table[self.node][dest]
+            newcosts = my_direct_cost_to_sender + packet.mincost[dest]
             
-            if new_cost_via_sender < current_cost:
-                self.distance_table[self.node][dest] = new_cost_via_sender
-                self.next_hop[dest] = sender 
+            if newcosts < curcost:
+                self.distance_table[self.node][dest] = newcosts
+                self.forward[dest] = sender 
                 changed = True
 
     # If any changes inform neighbors
-    if self.distance_table[self.node] != before_update:
+    if self.distance_table[self.node] != oldcosts:
         print("  changes based on update")
         print(f"node: {self.node}")
         for row in self.distance_table:
@@ -110,23 +110,23 @@ def common_link_cost_change(self, to_entity, new_cost):
     print(f"node {self.node}: link cost to {to_entity} changed to {new_cost}")
     
     #update direct costs to neighbor
-    old_cost = self.direct_costs[to_entity]
-    self.direct_costs[to_entity] = new_cost
+    old_cost = self.links[to_entity]
+    self.links[to_entity] = new_cost
     self.distance_table[self.node][to_entity] = new_cost
     
 
     #Re-eveluate paths
     for dest in range(4):
         if dest != self.node:
-            if (self.next_hop[dest] == to_entity or 
+            if (self.forward[dest] == to_entity or 
                 dest == to_entity):                  
                 
-                self.distance_table[self.node][dest] = self.direct_costs[dest]
+                self.distance_table[self.node][dest] = self.links[dest]
                 # if direct path else no path
-                if self.direct_costs[dest] < INF:
-                    self.next_hop[dest] = dest
+                if self.links[dest] < INF:
+                    self.forward[dest] = dest
                 else:
-                    self.next_hop[dest] = -1
+                    self.forward[dest] = -1
     
     print(f"node: {self.node}")
     for row in self.distance_table:
